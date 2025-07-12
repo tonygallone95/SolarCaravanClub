@@ -24,7 +24,7 @@ import openai
 
 def generate_article(keyword, title):
     """
-    Call OpenAI to generate a 1,500+ word SEO-friendly article for the given keyword and title.
+    Call OpenAI to generate a 1,500-word SEO-friendly article for the given keyword and title.
     """
     prompt = f"""
 Write a 1,500-word beginner-friendly caravan/RV blog post optimized for SEO.
@@ -35,7 +35,8 @@ and a strong call to action at the end to check Amazon.
 
 Title: {title}
 """
-    response = openai.ChatCompletion.create(
+    # Use new OpenAI Python v1 interface
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a helpful SEO content generator for caravans."},
@@ -44,6 +45,7 @@ Title: {title}
         temperature=0.7,
         max_tokens=4000
     )
+    # Extract content from the first choice
     return response.choices[0].message.content
 
 
