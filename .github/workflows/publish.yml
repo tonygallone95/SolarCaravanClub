@@ -51,7 +51,7 @@ jobs:
       - name: List available content files
         run: |
           echo "📁 Available content files:"
-          find . -name "*.html" -o -name "*.json" | grep -E "(article|content)" | head -10
+          find . -name "*.html" -o -name "*.json" | grep -E "(article|content)" | head -10 || echo "No content files found"
           
       - name: Validate content exists
         run: |
@@ -91,7 +91,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: publish-results
+          name: publish-results-${{ github.run_number }}
           path: |
             publish_result.json
             *.log
@@ -115,7 +115,7 @@ jobs:
           echo "📊 Pipeline completed at $(date)"
           if [ -f "publish_result.json" ]; then
             echo "📋 Post details:"
-            cat publish_result.json | python3 -m json.tool
+            cat publish_result.json | python3 -m json.tool || echo "Could not parse JSON result"
           fi
           
       - name: Notify on failure  
