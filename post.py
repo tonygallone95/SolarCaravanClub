@@ -1,130 +1,129 @@
-#!/usr/bin/env python3
-"""
-post.py
+name: Auto Publish Articles
+on:
+  workflow_dispatch:
+    inputs:
+      publish_status:
+        description: 'Publish Status'
+        required: true
+        default: 'draft'
+        type: choice
+        options:
+        - draft
+        - publish
+        - private
+      categories:
+        description: 'Category IDs (comma-separated, e.g., 1,5,12)'
+        required: false
+        default: ''
+      tags:
+        description: 'Tags (comma-separated, e.g., solar,caravan,RV)'
+        required: false
+        default: 'solar,caravan,RV,off-grid'
+      content_source:
+        description: 'Content Source'
+        required: true
+        default: 'article.html'
+        type: choice
+        options:
+        - article.html
+        - content.json
+        - latest_file
+  schedule:
+    - cron: '0 12 * * *'  # Daily at noon UTC (adjust as needed)
 
-Reads keywords from a CSV and for each:
- 1. Generates a 1,500+ word SEO-optimized article via OpenAI
- 2. Publishes it as a draft to WordPress via REST API
-
-Environment variables:
- - OPENAI_API_KEY
- - WP_SITE (e.g., https://solarcaravanclub.com)
- - WP_USER
- - WP_APP_PASS
- - KEYWORD_CSV (optional, defaults to "keywords.csv")
-"""
-
-import os
-import sys
-import csv
-import requests
-from requests.auth import HTTPBasicAuth
-import openai
-
-
-def generate_article(keyword, title):
-    """
-    Call OpenAI to generate a 1,500-word SEO-friendly article for the given keyword and title.
-    """
-    prompt = f"""
-Write a 1,500-word beginner-friendly caravan/RV blog post optimized for SEO.
-Target keyword: \"{keyword}\"
-Use short paragraphs, clear headings, bullet lists, product recommendations with
-Amazon affiliate links (tag caravansolarnation-20), pros & cons, FAQs, practical tips,
-and a strong call to action at the end to check Amazon.
-
-Title: {title}
-"""
-    # Use new OpenAI Python v1 interface
-    response = openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful SEO content generator for caravans."},
-            {"role": "user",   "content": prompt}
-        ],
-        temperature=0.7,
-        max_tokens=4000
-    )
-    # Extract content from the first choice
-    return response.choices[0].message.content
-
-
-def post_to_wp(title, content, slug=None, category_id=None, tag_ids=None):
-    """
-    Publish the given HTML content as a draft post on WordPress.
-    """
-    endpoint = f"{WP_SITE.rstrip('/')}/wp-json/wp/v2/posts"
-    payload = {
-        "title": title,
-        "content": content,
-        "status": "draft"
-    }
-    if slug:
-        payload["slug"] = slug
-    if category_id:
-        try:
-            payload["categories"] = [int(category_id)]
-        except ValueError:
-            print(f"⚠️ Invalid category_id '{category_id}', skipping")
-    if tag_ids:
-        try:
-            payload["tags"] = [int(t.strip()) for t in tag_ids.split(",") if t.strip()]
-        except ValueError:
-            print(f"⚠️ Invalid tag_ids '{tag_ids}', skipping")
-
-    resp = requests.post(
-        endpoint,
-        auth=HTTPBasicAuth(WP_USER, WP_APP_PASS),
-        json=payload
-    )
-    if resp.status_code == 201:
-        link = resp.json().get("link")
-        print(f"✅ Draft created: {title}\n→ {link}\n")
-    else:
-        print(f"❌ Failed to create '{title}': {resp.status_code} {resp.text}")
-
-
-def main():
-    # Load configuration from environment
-    global WP_SITE, WP_USER, WP_APP_PASS
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    WP_SITE         = os.getenv("WP_SITE")
-    WP_USER         = os.getenv("WP_USER")
-    WP_APP_PASS     = os.getenv("WP_APP_PASS")
-    KEYWORD_CSV     = os.getenv("KEYWORD_CSV", "keywords.csv")
-
-    # Check required env vars
-    missing = [v for v in ("OPENAI_API_KEY","WP_SITE","WP_USER","WP_APP_PASS") if not os.getenv(v)]
-    if missing:
-        print(f"❌ Missing required environment variables: {', '.join(missing)}")
-        sys.exit(1)
-
-    openai.api_key = OPENAI_API_KEY
-
-    try:
-        with open(KEYWORD_CSV, newline="", encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                keyword     = row.get("keyword")
-                title       = row.get("title") or keyword
-                slug        = row.get("slug")
-                category_id = row.get("category_id")
-                tag_ids     = row.get("tag_ids")
-
-                if not keyword:
-                    print("⚠️ Skipping row with no keyword")
-                    continue
-
-                print(f"📝 Generating article for '{keyword}' …")
-                article = generate_article(keyword, title)
-
-                print(f"🚀 Posting draft for '{title}' …")
-                post_to_wp(title, article, slug, category_id, tag_ids)
-
-    except FileNotFoundError:
-        print(f"❌ Keyword CSV file not found: {KEYWORD_CSV}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+jobs:
+  auto-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+          
+      - name: List available content files
+        run: |
+          echo "📁 Available content files:"
+          find . -name "*.html" -o -name "*.json" | grep -E "(article|content)" | head -10
+          
+      - name: Validate content exists
+        run: |
+          if [ "${{ github.event.inputs.content_source }}" = "article.html" ] && [ ! -f "article.html" ]; then
+            echo "❌ article.html not found!"
+            exit 1
+          elif [ "${{ github.event.inputs.content_source }}" = "content.json" ] && [ ! -f "content.json" ]; then
+            echo "❌ content.json not found!"
+            exit 1
+          fi
+          echo "✅ Content source validated"
+          
+      - name: Show content preview
+        run: |
+          echo "📄 Content preview (first 500 characters):"
+          if [ -f "article.html" ]; then
+            head -c 500 article.html
+          elif [ -f "content.json" ]; then
+            head -c 500 content.json
+          fi
+          echo ""
+          echo "..."
+          
+      - name: Run publishing script
+        env:
+          WP_SITE: ${{ secrets.WP_SITE }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_APP_PASS: ${{ secrets.WP_APP_PASS }}
+          PUBLISH_STATUS: ${{ github.event.inputs.publish_status || 'draft' }}
+          POST_CATEGORIES: ${{ github.event.inputs.categories }}
+          POST_TAGS: ${{ github.event.inputs.tags }}
+          CONTENT_SOURCE: ${{ github.event.inputs.content_source || 'article.html' }}
+        run: |
+          python post.py
+          
+      - name: Upload publish results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: publish-results
+          path: |
+            publish_result.json
+            *.log
+          retention-days: 30
+          
+      - name: Post-publish cleanup
+        if: success()
+        run: |
+          echo "🧹 Cleaning up..."
+          # Optional: Archive or move processed files
+          if [ -f "article.html" ]; then
+            mkdir -p processed
+            mv article.html "processed/article_$(date +%Y%m%d_%H%M%S).html"
+            echo "✅ Moved article.html to processed/"
+          fi
+          
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "🎉 Article published successfully!"
+          echo "📊 Pipeline completed at $(date)"
+          if [ -f "publish_result.json" ]; then
+            echo "📋 Post details:"
+            cat publish_result.json | python3 -m json.tool
+          fi
+          
+      - name: Notify on failure  
+        if: failure()
+        run: |
+          echo "💥 Pipeline failed!"
+          echo "📊 Check the logs above for details"
+          echo "🔧 Common issues:"
+          echo "  - Check WordPress credentials in secrets"
+          echo "  - Verify content file exists"
+          echo "  - Check WordPress site is accessible"
