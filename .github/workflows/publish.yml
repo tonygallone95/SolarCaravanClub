@@ -1,10 +1,10 @@
-name: Auto Publish Articles
+name: 🚀 Auto Publish Articles
 
 on:
   workflow_dispatch:
     inputs:
       publish_status:
-        description: 'Publish Status'
+        description: '📝 Publish Status'
         required: true
         default: 'draft'
         type: choice
@@ -12,12 +12,12 @@ on:
           - draft
           - publish
       html_file:
-        description: 'HTML file to publish (e.g., article.html)'
+        description: '📄 HTML file to publish (e.g., article.html)'
         required: false
         default: ''
         type: string
       post_title:
-        description: 'Post Title'
+        description: '📰 Post Title'
         required: false
         default: ''
         type: string
@@ -25,42 +25,255 @@ on:
 jobs:
   auto-publish:
     runs-on: ubuntu-latest
+    name: 📤 Publish Article to WordPress
     
     steps:
-      - name: Checkout repository
+      # ========================================
+      # SETUP PHASE
+      # ========================================
+      
+      - name: 🏁 Start Publishing Process
+        run: |
+          echo "========================================="
+          echo "🚀 WORDPRESS ARTICLE PUBLISHER"
+          echo "========================================="
+          echo "📅 Date: $(date)"
+          echo "👤 Triggered by: ${{ github.actor }}"
+          echo "📝 Status: ${{ github.event.inputs.publish_status }}"
+          echo "📄 File: ${{ github.event.inputs.html_file || 'Auto-detect' }}"
+          echo "📰 Title: ${{ github.event.inputs.post_title || 'Auto-generate' }}"
+          echo "========================================="
+      
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
-        
-      - name: Set up Python
+        with:
+          submodules: 'recursive'
+      
+      - name: 🔍 Verify Repository Structure
+        run: |
+          echo "📂 Repository Contents:"
+          echo "========================================="
+          tree -L 2 2>/dev/null || ls -la
+          echo "========================================="
+          echo ""
+          echo "📊 Repository Stats:"
+          echo "Total files: $(find . -type f | wc -l)"
+          echo "HTML files: $(find . -name "*.html" | wc -l)"
+          echo "JSON files: $(find . -name "*.json" | wc -l)"
+      
+      # ========================================
+      # ENVIRONMENT SETUP
+      # ========================================
+      
+      - name: 🐍 Set up Python Environment
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          
-      - name: Install dependencies
+      
+      - name: 📦 Cache Python Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: 🔧 Install Dependencies
         run: |
+          echo "📦 Installing Python dependencies..."
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
-          
-      - name: Check for content files
+          pip install requests beautifulsoup4 python-dotenv colorama
+          echo ""
+          echo "✅ Installed packages:"
+          pip list | grep -E "(requests|beautifulsoup4|python-dotenv|colorama)"
+      
+      # ========================================
+      # VALIDATION PHASE
+      # ========================================
+      
+      - name: 🔐 Validate Secrets
         run: |
-          echo "📁 Looking for content files..."
-          ls -la *.html *.json 2>/dev/null || echo "No HTML/JSON files found"
+          echo "🔒 Checking WordPress credentials..."
+          if [ -z "${{ secrets.WP_SITE }}" ]; then
+            echo "❌ ERROR: WP_SITE secret is missing!"
+            exit 1
+          else
+            echo "✅ WP_SITE is configured"
+          fi
           
-      - name: Run publishing script
+          if [ -z "${{ secrets.WP_USER }}" ]; then
+            echo "❌ ERROR: WP_USER secret is missing!"
+            exit 1
+          else
+            echo "✅ WP_USER is configured"
+          fi
+          
+          if [ -z "${{ secrets.WP_APP_PASS }}" ]; then
+            echo "❌ ERROR: WP_APP_PASS secret is missing!"
+            exit 1
+          else
+            echo "✅ WP_APP_PASS is configured"
+          fi
+          
+          echo ""
+          echo "🎯 Target Site: ${{ secrets.WP_SITE }}"
+      
+      - name: 📋 Scan for Content Files
+        id: scan_content
+        run: |
+          echo "🔍 Scanning for publishable content..."
+          echo "========================================="
+          
+          # Find HTML files
+          echo "📄 HTML Files Found:"
+          if find . -name "*.html" -type f | grep -v node_modules | head -10; then
+            HTML_COUNT=$(find . -name "*.html" -type f | grep -v node_modules | wc -l)
+            echo "Total: $HTML_COUNT HTML files"
+            echo "html_count=$HTML_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No HTML files found"
+            echo "html_count=0" >> $GITHUB_OUTPUT
+          fi
+          
+          echo ""
+          echo "📊 JSON Files Found:"
+          if find . -name "*.json" -type f | grep -v node_modules | grep -v package | head -10; then
+            JSON_COUNT=$(find . -name "*.json" -type f | grep -v node_modules | grep -v package | wc -l)
+            echo "Total: $JSON_COUNT JSON files"
+            echo "json_count=$JSON_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No JSON files found"
+            echo "json_count=0" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "========================================="
+      
+      - name: 🎯 Determine Target File
+        id: target_file
+        run: |
+          echo "🎯 Determining target file..."
+          
+          if [ -n "${{ github.event.inputs.html_file }}" ]; then
+            TARGET_FILE="${{ github.event.inputs.html_file }}"
+            echo "📌 Using specified file: $TARGET_FILE"
+          else
+            echo "🔍 Auto-detecting most recent HTML file..."
+            TARGET_FILE=$(find . -name "*.html" -type f | grep -v node_modules | xargs ls -t | head -1)
+            if [ -n "$TARGET_FILE" ]; then
+              echo "📌 Found: $TARGET_FILE"
+            else
+              echo "❌ No HTML files found for auto-detection"
+              exit 1
+            fi
+          fi
+          
+          echo "target_file=$TARGET_FILE" >> $GITHUB_OUTPUT
+          
+          # Show file preview
+          echo ""
+          echo "📄 File Preview:"
+          echo "========================================="
+          head -20 "$TARGET_FILE" | sed 's/^/  /'
+          echo "========================================="
+          echo "📏 File size: $(du -h "$TARGET_FILE" | cut -f1)"
+          echo "📅 Last modified: $(date -r "$TARGET_FILE" 2>/dev/null || stat -c %y "$TARGET_FILE" 2>/dev/null || echo 'Unknown')"
+      
+      # ========================================
+      # PUBLISHING PHASE
+      # ========================================
+      
+      - name: 🚀 Execute Publishing Script
+        id: publish
         env:
           WP_SITE: ${{ secrets.WP_SITE }}
           WP_USER: ${{ secrets.WP_USER }}
           WP_APP_PASS: ${{ secrets.WP_APP_PASS }}
           PUBLISH_STATUS: ${{ github.event.inputs.publish_status }}
-          HTML_FILE: ${{ github.event.inputs.html_file }}
+          HTML_FILE: ${{ steps.target_file.outputs.target_file }}
           POST_TITLE: ${{ github.event.inputs.post_title }}
         run: |
-          python post.py
+          echo "🚀 Starting WordPress publishing..."
+          echo "========================================="
+          echo "📤 Publishing to: $WP_SITE"
+          echo "👤 User: $WP_USER"
+          echo "📝 Status: $PUBLISH_STATUS"
+          echo "📄 File: $HTML_FILE"
+          echo "========================================="
+          echo ""
           
-      - name: Show results
+          # Run the publishing script with error handling
+          if python post.py; then
+            echo "✅ Publishing script completed successfully"
+            echo "publish_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Publishing script failed with exit code: $?"
+            echo "publish_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      # ========================================
+      # RESULTS PHASE
+      # ========================================
+      
+      - name: 📊 Process Publishing Results
         if: always()
         run: |
-          echo "🎯 Publishing completed!"
+          echo "📊 PUBLISHING RESULTS"
+          echo "========================================="
+          
           if [ -f "publish_result.json" ]; then
-            echo "📋 Results:"
-            cat publish_result.json
+            echo "✅ Result file found"
+            echo ""
+            echo "📋 Raw Results:"
+            cat publish_result.json | python -m json.tool || cat publish_result.json
+            echo ""
+            
+            # Extract key information if possible
+            if command -v jq >/dev/null 2>&1; then
+              echo "📌 Key Information:"
+              echo "Post ID: $(jq -r '.id // "N/A"' publish_result.json)"
+              echo "Post URL: $(jq -r '.link // "N/A"' publish_result.json)"
+              echo "Status: $(jq -r '.status // "N/A"' publish_result.json)"
+            fi
+          else
+            echo "❌ No result file found (publish_result.json)"
           fi
+          
+          echo "========================================="
+      
+      - name: 📝 Generate Summary Report
+        if: always()
+        run: |
+          echo "## 📝 Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🚀 Status | ${{ steps.publish.outputs.publish_status || 'Unknown' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📅 Date | $(date) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 👤 User | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📝 Publish Mode | ${{ github.event.inputs.publish_status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📄 File | ${{ steps.target_file.outputs.target_file || 'Not found' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 HTML Files | ${{ steps.scan_content.outputs.html_count || '0' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 JSON Files | ${{ steps.scan_content.outputs.json_count || '0' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "publish_result.json" ]; then
+            echo "### 🎯 WordPress Response" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat publish_result.json | python -m json.tool >> $GITHUB_STEP_SUMMARY 2>/dev/null || cat publish_result.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🎉 Final Status
+        if: always()
+        run: |
+          echo ""
+          echo "========================================="
+          if [ "${{ steps.publish.outputs.publish_status }}" == "success" ]; then
+            echo "✅ 🎉 PUBLISHING COMPLETED SUCCESSFULLY!"
+          else
+            echo "❌ 😞 PUBLISHING FAILED"
+          fi
+          echo "========================================="
+          echo ""
+          echo "📌 Check the summary tab for detailed results"
