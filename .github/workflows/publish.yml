@@ -11,6 +11,16 @@ on:
         options:
           - draft
           - publish
+      html_file:
+        description: 'HTML file to publish (e.g., article.html)'
+        required: false
+        default: ''
+        type: string
+      post_title:
+        description: 'Post Title'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   auto-publish:
@@ -28,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests beautifulsoup4
           
       - name: Check for content files
         run: |
@@ -41,6 +51,8 @@ jobs:
           WP_USER: ${{ secrets.WP_USER }}
           WP_APP_PASS: ${{ secrets.WP_APP_PASS }}
           PUBLISH_STATUS: ${{ github.event.inputs.publish_status }}
+          HTML_FILE: ${{ github.event.inputs.html_file }}
+          POST_TITLE: ${{ github.event.inputs.post_title }}
         run: |
           python post.py
           
@@ -52,12 +64,3 @@ jobs:
             echo "📋 Results:"
             cat publish_result.json
           fi
-          
-      # If you need to upload artifacts, use v4
-      - name: Upload results (if needed)
-        if: always() && hashFiles('publish_result.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-results
-          path: publish_result.json
-          retention-days: 7
