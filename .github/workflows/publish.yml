@@ -10,32 +10,12 @@ on:
         options:
         - draft
         - publish
-        - private
-      categories:
-        description: 'Category IDs (comma-separated, e.g., 1,5,12)'
-        required: false
-        default: ''
-      tags:
-        description: 'Tags (comma-separated, e.g., solar,caravan,RV)'
-        required: false
-        default: 'solar,caravan,RV,off-grid'
-      content_source:
-        description: 'Content Source'
-        required: true
-        default: 'article.html'
-        type: choice
-        options:
-        - article.html
-        - content.json
-        - latest_file
-  schedule:
-    - cron: '0 12 * * *'  # Daily at noon UTC (adjust as needed)
 
 jobs:
   auto-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         
       - name: Set up Python
@@ -46,84 +26,27 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install requests
           
-      - name: List available content files
+      - name: Check for content files
         run: |
-          echo "📁 Available content files:"
-          find . -name "*.html" -o -name "*.json" | grep -E "(article|content)" | head -10 || echo "No content files found"
-          
-      - name: Validate content exists
-        run: |
-          if [ "${{ github.event.inputs.content_source }}" = "article.html" ] && [ ! -f "article.html" ]; then
-            echo "❌ article.html not found!"
-            exit 1
-          elif [ "${{ github.event.inputs.content_source }}" = "content.json" ] && [ ! -f "content.json" ]; then
-            echo "❌ content.json not found!"
-            exit 1
-          fi
-          echo "✅ Content source validated"
-          
-      - name: Show content preview
-        run: |
-          echo "📄 Content preview (first 500 characters):"
-          if [ -f "article.html" ]; then
-            head -c 500 article.html
-          elif [ -f "content.json" ]; then
-            head -c 500 content.json
-          fi
-          echo ""
-          echo "..."
+          echo "📁 Looking for content files..."
+          ls -la *.html *.json 2>/dev/null || echo "No HTML/JSON files found"
           
       - name: Run publishing script
         env:
           WP_SITE: ${{ secrets.WP_SITE }}
           WP_USER: ${{ secrets.WP_USER }}
           WP_APP_PASS: ${{ secrets.WP_APP_PASS }}
-          PUBLISH_STATUS: ${{ github.event.inputs.publish_status || 'draft' }}
-          POST_CATEGORIES: ${{ github.event.inputs.categories }}
-          POST_TAGS: ${{ github.event.inputs.tags }}
-          CONTENT_SOURCE: ${{ github.event.inputs.content_source || 'article.html' }}
+          PUBLISH_STATUS: ${{ github.event.inputs.publish_status }}
         run: |
           python post.py
           
-      - name: Upload publish results
-        uses: actions/upload-artifact@v4
+      - name: Show results
         if: always()
-        with:
-          name: publish-results-${{ github.run_number }}
-          path: |
-            publish_result.json
-            *.log
-          retention-days: 30
-          
-      - name: Post-publish cleanup
-        if: success()
         run: |
-          echo "🧹 Cleaning up..."
-          # Optional: Archive or move processed files
-          if [ -f "article.html" ]; then
-            mkdir -p processed
-            mv article.html "processed/article_$(date +%Y%m%d_%H%M%S).html"
-            echo "✅ Moved article.html to processed/"
-          fi
-          
-      - name: Notify on success
-        if: success()
-        run: |
-          echo "🎉 Article published successfully!"
-          echo "📊 Pipeline completed at $(date)"
+          echo "🎯 Publishing completed!"
           if [ -f "publish_result.json" ]; then
-            echo "📋 Post details:"
-            cat publish_result.json | python3 -m json.tool || echo "Could not parse JSON result"
+            echo "📋 Results:"
+            cat publish_result.json
           fi
-          
-      - name: Notify on failure  
-        if: failure()
-        run: |
-          echo "💥 Pipeline failed!"
-          echo "📊 Check the logs above for details"
-          echo "🔧 Common issues:"
-          echo "  - Check WordPress credentials in secrets"
-          echo "  - Verify content file exists"
-          echo "  - Check WordPress site is accessible"
