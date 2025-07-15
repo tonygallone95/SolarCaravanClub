@@ -406,28 +406,241 @@ margin-bottom: 5px;
 
 <div class="section">
     <div class="section-title">Critical Failures Summary</div>
-    <div class="summary-card priority-critical">
-        <h4>🚨 P1 - Critical System Logic Errors</h4>
-        <ul>
-            <li><strong>Flu Classification Error:</strong> 2+ flu cases classified as Medium Risk instead of High Priority (OS-5981, OS-5985)</li>
-            <li><strong>Field Removal Incomplete:</strong> "Two Or More Covid" fields still showing in Medium Risk emails (OS-5926)</li>
-        </ul>
-    </div>
-    <div class="summary-card priority-high">
-        <h4>⚠️ P2 - High Priority Issues</h4>
-        <ul>
-            <li><strong>Email Duplication:</strong> Low Risk scenarios generating 6 emails instead of 3 (OS-5977, OS-5978)</li>
-            <li><strong>Colour Coding Errors:</strong> Hospitalization severity showing wrong colors (4-5 cases: Amber instead of Red)</li>
-        </ul>
-    </div>
-    <div class="summary-card priority-medium">
-        <h4>🔶 P3 - Medium Priority Issues</h4>
-        <ul>
-            <li><strong>Percentage Formatting:</strong> Showing 2 decimal places and >100% values</li>
-            <li><strong>Missing IPC Option:</strong> "Waste, cleaning or laundry" option not available</li>
-            <li><strong>Empty Tables:</strong> Irrelevant sections appearing in Single Flu outputs</li>
-        </ul>
-    </div>
+    <div class="section-title">UAT Testing Matrix - All Test Cases</div>
+    <table class="table" style="font-size: 12px;">
+        <thead>
+            <tr>
+                <th style="width: 60px;">Test ID</th>
+                <th style="width: 100px;">Incident</th>
+                <th style="width: 250px;">Test Case Description</th>
+                <th style="width: 100px;">Scenario</th>
+                <th style="width: 80px;">Wendy</th>
+                <th style="width: 80px;">Helen</th>
+                <th style="width: 80px;">Penelope</th>
+                <th style="width: 80px;">Kieran</th>
+                <th style="width: 100px;">OS Numbers</th>
+                <th>Comments</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC01</strong></td>
+                <td>INC0189106</td>
+                <td>Verify "Total Confirmed_ARI_N_Residents & Staff" removed</td>
+                <td>High Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td>OS-5973</td>
+                <td>Kieran: Percentage formatting issues</td>
+            </tr>
+            <tr class="priority-critical">
+                <td><strong>TC02</strong></td>
+                <td>INC0189106</td>
+                <td>Verify "Two Or More Covid" fields removed</td>
+                <td>Medium Risk</td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td>OS-5926</td>
+                <td><strong>CRITICAL: Fields still displaying</strong></td>
+            </tr>
+            <tr>
+                <td><strong>TC03</strong></td>
+                <td>INC0189106</td>
+                <td>Verify removed fields in Low Risk outputs</td>
+                <td>Low Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5978</td>
+                <td>All required fields removed</td>
+            </tr>
+            <tr>
+                <td><strong>TC04</strong></td>
+                <td>INC0189106</td>
+                <td>Verify removed fields in Single Flu case</td>
+                <td>Single Flu</td>
+                <td><span class="badge badge-partial">PARTIAL</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5974</td>
+                <td>Wendy: Empty tables appearing</td>
+            </tr>
+            <tr>
+                <td><strong>TC05</strong></td>
+                <td>INC0189106</td>
+                <td>Verify field removal with Covid supplies ordering</td>
+                <td>Covid Supplies</td>
+                <td><span class="badge badge-partial">PARTIAL</span></td>
+                <td>-</td>
+                <td>-</td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td>OS-5968</td>
+                <td>Unclear COVID supplies functionality</td>
+            </tr>
+            <tr class="priority-critical">
+                <td><strong>TC06</strong></td>
+                <td>INC0189095</td>
+                <td>High Risk outbreak classification</td>
+                <td>High Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5973, OS-5928</td>
+                <td><strong>CRITICAL: Flu showing as Medium</strong></td>
+            </tr>
+            <tr>
+                <td><strong>TC07</strong></td>
+                <td>INC0189095</td>
+                <td>Medium Risk outbreak classification</td>
+                <td>Medium Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5926</td>
+                <td>Correctly classified</td>
+            </tr>
+            <tr>
+                <td><strong>TC08</strong></td>
+                <td>INC0189095</td>
+                <td>Low Risk outbreak classification</td>
+                <td>Low Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5978</td>
+                <td>Correctly classified</td>
+            </tr>
+            <tr>
+                <td><strong>TC09</strong></td>
+                <td>INC0189095</td>
+                <td>Single Flu case classification</td>
+                <td>Single Flu</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5974</td>
+                <td>Correctly showing "Single case of flu"</td>
+            </tr>
+            <tr>
+                <td><strong>TC10</strong></td>
+                <td>INC0189098</td>
+                <td>IPC Monitoring - Pink highlighting</td>
+                <td>All</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Multiple</td>
+                <td>Pink highlighting working</td>
+            </tr>
+            <tr>
+                <td><strong>TC11</strong></td>
+                <td>INC0189098</td>
+                <td>Issues Needing Support - Pink highlighting</td>
+                <td>All</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Multiple</td>
+                <td>Missing "Waste, cleaning, laundry" option</td>
+            </tr>
+            <tr>
+                <td><strong>TC12</strong></td>
+                <td>INC0189098</td>
+                <td>Vaccination rates - Blue highlighting</td>
+                <td>All</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>Multiple</td>
+                <td>Blue highlighting correct</td>
+            </tr>
+            <tr class="priority-high">
+                <td><strong>TC13</strong></td>
+                <td>INC0189098</td>
+                <td>Severity Hospitalizations - Color thresholds</td>
+                <td>Multiple</td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>OS-5981, OS-5926</td>
+                <td>2-3: No color (should be amber), 4-5: Amber (should be red)</td>
+            </tr>
+            <tr>
+                <td><strong>TC14</strong></td>
+                <td>INC0189098</td>
+                <td>Single case color coding</td>
+                <td>Single Flu</td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>Wendy: Showing GREEN (should be no color)</td>
+            </tr>
+            <tr>
+                <td><strong>TC15</strong></td>
+                <td>INC0189267</td>
+                <td>High Risk email subject format</td>
+                <td>High Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>-</td>
+                <td>OS-5973, OS-5928</td>
+                <td>Correct format</td>
+            </tr>
+            <tr>
+                <td><strong>TC16</strong></td>
+                <td>INC0189267</td>
+                <td>Medium Risk email subject format</td>
+                <td>Medium Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>-</td>
+                <td>OS-5926</td>
+                <td>Correct format</td>
+            </tr>
+            <tr class="priority-critical">
+                <td><strong>TC17</strong></td>
+                <td>INC0189267</td>
+                <td>Low Risk email - Duplicate prevention</td>
+                <td>Low Risk</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td><span class="badge badge-fail">FAIL</span></td>
+                <td>-</td>
+                <td>OS-5977, OS-5978</td>
+                <td><strong>CRITICAL: 6 emails received instead of 3</strong></td>
+            </tr>
+            <tr>
+                <td><strong>TC18</strong></td>
+                <td>INC0189267</td>
+                <td>Single Flu case email format</td>
+                <td>Single Flu</td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td><span class="badge badge-pass">PASS</span></td>
+                <td>-</td>
+                <td>OS-5974</td>
+                <td>Correct format</td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 </div>
 
